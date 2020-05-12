@@ -7,12 +7,14 @@ from torch.utils.data import Dataset
 import torch as pt
 
 from preprocessing import read_split_images
+from word2vec import train_w2v, use_w2v
 
 PATH = "input/"
 
 
 class FLICKR30K(Dataset):
     c_vec = CountVectorizer(stop_words='english', min_df=1, max_df=100000)
+    w2v_model = None
 
     def __init__(self, mode, limit=-1):
         super().__init__()
@@ -27,9 +29,9 @@ class FLICKR30K(Dataset):
 
         self.caption_labels = list(internal_set_captions.keys())
         if mode == 'train':
-            self.captions = np.stack(FLICKR30K.c_vec.fit_transform(internal_set_captions.values()).todense(), axis=0)
+            self.captions, FLICKR30K.w2v_model= train_w2v(internal_set_captions.values())
         else:
-            self.captions = np.stack(FLICKR30K.c_vec.transform(internal_set_captions.values()).todense(), axis=0)
+            self.captions = use_w2v(internal_set_captions.values(), FLICKR30K.w2v_model)
 
         if limit > -1:
             self.captions = self.captions[:limit * 5]

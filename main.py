@@ -4,6 +4,8 @@ import torch.optim as optim
 import os
 import sys
 import shutil
+
+from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from models import *
 from losses import *
@@ -44,6 +46,7 @@ parser.add_argument('--gamma', type=float, default=1.0, metavar='M',
 parser.add_argument('--eta', type=float, default=1.0, metavar='M',
                     help='factor in the loss function')
 
+
 def main():
     # enable GPU learning
     global args
@@ -69,6 +72,9 @@ def main():
     img_dim, txt_dim = train_set.get_dimensions()
     model = BasicModel(img_dim, txt_dim, args.dim_hidden, args.c)
 
+    block = np.ones(5 ** 2).reshape(5, 5)
+    S = Variable(torch.from_numpy((np.kron(np.eye(len(train_set) // 5, dtype=int), block))))
+
     if args.cuda:
         model.cuda()
 
@@ -84,7 +90,7 @@ def main():
             model.load_state_dict(checkpoint['state_dict'])
             model.to(torch.cuda.current_device())
             print("=> loaded checkpoint '{}' (epoch {})"
-                    .format(args.resume, checkpoint['epoch']))
+                  .format(args.resume, checkpoint['epoch']))
         else:
             print("=> no checkpoint found at '{}'".format(args.resume))
 
@@ -104,7 +110,7 @@ def main():
         adjust_learning_rate(optimizer, epoch)
 
         # train for one epoch
-        train(train_loader, model, optimizer, epoch)
+        train(train_loader, model, S, optimizer, epoch)
 
         # evaluate on validation set
         map = test(val_loader, model)
@@ -122,7 +128,8 @@ def main():
     model.load_state_dict(checkpoint['state_dict'])
     test(test_loader, model)
 
-def train(train_loader, model, optimizer, epoch):
+
+def train(train_loader, model, S, optimizer, epoch):
     losses = AverageMeter()
     maps = AverageMeter()
 
@@ -137,8 +144,8 @@ def train(train_loader, model, optimizer, epoch):
         F, G, B = model(x, y)
 
         # TODO: Use F, G and B to compute the MAP@10 and loss
-        map = None
-        loss = None
+        map = .1
+        loss = cross_modal_hashing_loss(S, F, G, B, 1, 1)
 
         # record MAP@10 and loss
         num_pairs = len(x)
@@ -161,6 +168,7 @@ def train(train_loader, model, optimizer, epoch):
                 losses.val, losses.avg,
                        100. * maps.val, 100. * maps.avg))
 
+
 def test(test_loader, model):
     # switch to evaluation mode
     model.eval()
@@ -176,6 +184,7 @@ def test(test_loader, model):
 
     return map
 
+
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     """saves checkpoint to disk"""
     directory = "runs/%s/" % (args.name)
@@ -184,7 +193,8 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     filename = directory + filename
     torch.save(state, filename)
     if is_best:
-            shutil.copyfile(filename, 'runs/%s/' % (args.name) + 'model_best.pth.tar')
+        shutil.copyfile(filename, 'runs/%s/' % (args.name) + 'model_best.pth.tar')
+
 
 class AverageMeter(object):
     """computes and stores the average and current value"""
@@ -204,11 +214,13 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
+
 def adjust_learning_rate(optimizer, epoch):
     """sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
     lr = args.lr * ((1 - 0.015) ** epoch)
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
 
 if __name__ == '__main__':
     main()

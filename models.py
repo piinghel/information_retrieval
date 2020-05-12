@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import numpy as np
+
 
 class BasicModel(nn.Module):
     def __init__(self, img_dim, txt_dim, hidden_dim, c):
@@ -26,4 +28,7 @@ class BasicModel(nn.Module):
         G = self.txt_proj(y)
 
         B = (F + G).sign()
+
+        block = np.ones(5 ** 2).reshape(5, 5)
+
         return F, G, B
