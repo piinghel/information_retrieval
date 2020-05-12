@@ -57,11 +57,14 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     # obtain data loaders for train, validation and test sets
-    train_set = FLICKR30K(mode='train')
+    train_set = FLICKR30K(mode='train', limit=5000)
+    test_set = FLICKR30K(mode='test', limit=1000)
+    val_set = FLICKR30K(mode='val', limit=500)
+    print('datasets loaded')
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(FLICKR30K(mode='test'), batch_size=args.batch_size, shuffle=False)
-    val_loader = DataLoader(FLICKR30K(mode='val'), batch_size=args.batch_size, shuffle=False)
-
+    test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False)
+    val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False)
+    print('loaders created')
     # create a model for cross-modal retrieval
     img_dim, txt_dim = train_set.get_dimensions()
     model = BasicModel(img_dim, txt_dim, args.dim_hidden, args.c)

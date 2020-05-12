@@ -27,7 +27,7 @@ def get_split_idx(path=None):
     return train_idx, val_idx, test_idx
 
 
-def read_split_images(path=None, verbose=True, mode='train'):
+def read_split_images(path=None, mode='train', limit=-1):
     """
     reads in the image output and input into a train, validation and test set
     according to https://github.com/BryanPlummer/flickr30k_entities
@@ -46,21 +46,26 @@ def read_split_images(path=None, verbose=True, mode='train'):
 
     # load first the whole image dataset in
     df = pd.read_csv(path + "image_features.csv", sep=" ", header=None)
-
     # remove .jpg from first row
     df.iloc[:, 0] = df.iloc[:, 0].str.split('.').str[0]
 
     # split image output in train/validation/test set
     if mode == 'train':
         df_train = df[df.iloc[:, 0].isin(train_idx.tolist())]
+        if limit > -1:
+            df_train = df_train.iloc[:limit]
         print(f"Dimensions of the training set: {df_train.shape}")
         return df_train
     elif mode == 'val':
         df_val = df[df.iloc[:, 0].isin(val_idx.tolist())]
+        if limit > -1:
+            df_val = df_val.iloc[:limit]
         print(f"Dimensions of the validation set: {df_val.shape}")
         return df_val
     elif mode == 'test':
         df_test = df[df.iloc[:, 0].isin(test_idx.tolist())]
+        if limit > -1:
+            df_test = df_test.iloc[:limit]
         print(f"Dimensions of the test set: {df_test.shape}")
         return df_test
     else:
