@@ -1,3 +1,4 @@
+# %%
 import torch
 import argparse
 import torch.optim as optim
@@ -46,7 +47,7 @@ parser.add_argument('--gamma', type=float, default=1.0, metavar='M',
 parser.add_argument('--eta', type=float, default=1.0, metavar='M',
                     help='factor in the loss function')
 
-
+# %%
 def main():
     # enable GPU learning
     global args
