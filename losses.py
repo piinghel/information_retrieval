@@ -1,5 +1,6 @@
 import torch
 
+
 def biranking_loss(a, b, margin, eps=1e-8):
     # compute cosine similarity matrix of all pairs in a and b
     a_n, b_n = a.norm(dim=-1, keepdim=True), b.norm(dim=-1, keepdim=True)
@@ -26,17 +27,18 @@ def biranking_loss(a, b, margin, eps=1e-8):
     num_sample = loss.size(0)
     return torch.sum(loss) / num_sample
 
+
 def cross_modal_hashing_loss(S, F, G, B, gamma, eta):
     # enforce cross-modal similarity
-    theta = 0.5 * torch.mm(torch.t(F), G)
-    term1 = - torch.sum((S.cpu() * theta.cpu() - torch.log(1 + torch.exp(theta.cpu())))).cuda()
+    theta = 0.5 * torch.mm(G, F.t())
+    term1 = - torch.sum((S.cpu() * theta.cpu() - torch.log(1 + torch.exp(theta.cpu())))).cpu()
 
     # enforce binary codes to preserve cross-modal similarity
-    term2 = gamma * (torch.norm(B - F)**2 + torch.norm(B - G)**2)
+    term2 = gamma * (torch.norm(B - F) ** 2 + torch.norm(B - G) ** 2)
 
     # enforce maximization of the information provided in each vector dimension
-    term3 = eta * (torch.norm(torch.mm(F, torch.ones(F.size(-1), 1).cuda()))**2 +
-                   torch.norm(torch.mm(G, torch.ones(G.size(-1), 1).cuda()))**2)
+    term3 = eta * (torch.norm(torch.mm(F.cpu(), torch.ones(F.size(-1), 1).cpu())) ** 2 +
+                   torch.norm(torch.mm(G.cpu(), torch.ones(G.size(-1), 1).cpu())) ** 2)
 
     loss = term1 + term2 + term3
 

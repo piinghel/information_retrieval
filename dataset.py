@@ -24,12 +24,12 @@ class FLICKR30K(Dataset):
         internal_set_captions = json.load(open('output/data/{}.json'.format(self.mode), 'r'))
 
         self.image_labels = internal_set_images.iloc[:, 0]
-        internal_set_images = internal_set_images.drop(0,1)
+        internal_set_images = internal_set_images.drop(0, 1)
         self.images = internal_set_images.to_numpy()
 
         self.caption_labels = list(internal_set_captions.keys())
         if mode == 'train':
-            self.captions, FLICKR30K.w2v_model= train_w2v(internal_set_captions.values())
+            self.captions, FLICKR30K.w2v_model = train_w2v(internal_set_captions.values())
         else:
             self.captions = use_w2v(internal_set_captions.values(), FLICKR30K.w2v_model)
 
@@ -39,10 +39,20 @@ class FLICKR30K(Dataset):
 
         self.captions_per_image = len(self.caption_labels) / len(self.image_labels)
         self.images = np.repeat(self.images, repeats=self.captions_per_image,
-                                             axis=0)
+                                axis=0)
+
+        self.caption_indices = np.random.permutation(len(self.images))
+        self.image_indices = np.random.permutation(len(self.images))
+
+        self.captions = self.captions[self.caption_indices]
+        self.caption_labels = self.captions[self.caption_indices]
+
+        self.images = self.images[self.image_indices]
+        self.image_labels = self.images[self.image_indices]
 
     def __getitem__(self, index):
-        return pt.tensor(self.images[index]).float(), pt.tensor(self.captions[index]).float()
+        return self.image_indices[index], pt.tensor(self.images[index]).float(), self.caption_indices[index], pt.tensor(
+            self.captions[index]).float()
 
     def __len__(self):
         return len(self.captions)

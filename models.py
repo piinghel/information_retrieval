@@ -4,7 +4,8 @@ import numpy as np
 
 
 class BasicModel(nn.Module):
-    def __init__(self, img_dim, txt_dim, hidden_dim, c):
+
+    def __init__(self, nr_captions, img_dim, txt_dim, hidden_dim, c):
         super().__init__()
         # instantiate basic image projection to shared feature space
         self.img_proj = torch.nn.Sequential(
@@ -22,13 +23,11 @@ class BasicModel(nn.Module):
 
     def forward(self, x, y):
         # project image to shared feature space
-        F = self.img_proj(x)
+        F = self.img_proj(x).cpu()
 
         # project description to shared feature space
-        G = self.txt_proj(y)
+        G = self.txt_proj(y).cpu()
 
         B = (F + G).sign()
-
-        block = np.ones(5 ** 2).reshape(5, 5)
 
         return F, G, B

@@ -60,9 +60,9 @@ def main():
         torch.cuda.manual_seed(args.seed)
 
     # obtain data loaders for train, validation and test sets
-    train_set = FLICKR30K(mode='train', limit=5000)
-    test_set = FLICKR30K(mode='test', limit=1000)
-    val_set = FLICKR30K(mode='val', limit=500)
+    train_set = FLICKR30K(mode='train', limit=1000)
+    test_set = FLICKR30K(mode='test', limit=200)
+    val_set = FLICKR30K(mode='val', limit=50)
     print('datasets loaded')
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True)
     test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False)
@@ -70,7 +70,7 @@ def main():
     print('loaders created')
     # create a model for cross-modal retrieval
     img_dim, txt_dim = train_set.get_dimensions()
-    model = BasicModel(img_dim, txt_dim, args.dim_hidden, args.c)
+    model = BasicModel(len(train_set), img_dim, txt_dim, args.dim_hidden, args.c)
 
     block = np.ones(5 ** 2).reshape(5, 5)
     S = Variable(torch.from_numpy((np.kron(np.eye(len(train_set) // 5, dtype=int), block))))
@@ -135,7 +135,7 @@ def train(train_loader, model, S, optimizer, epoch):
 
     # switch to train mode
     model.train()
-    for batch_idx, (x, y) in enumerate(train_loader):
+    for batch_idx, (indices_x, x, indices_y, y) in enumerate(train_loader):
         if args.cuda:
             x = x.cuda()
             y = y.cuda()
@@ -143,14 +143,16 @@ def train(train_loader, model, S, optimizer, epoch):
         # pass data samples to model
         F, G, B = model(x, y)
 
+        sim = S[indices_x, indices_y]
+
         # TODO: Use F, G and B to compute the MAP@10 and loss
         map = .1
-        loss = cross_modal_hashing_loss(S, F, G, B, 1, 1)
+        loss = cross_modal_hashing_loss(sim, F, G, B, 1, 1)
 
         # record MAP@10 and loss
         num_pairs = len(x)
         losses.update(loss.item(), num_pairs)
-        maps.update(map.item(), num_pairs)
+        maps.update(map, num_pairs)
 
         # compute gradient and do optimizer step
         optimizer.zero_grad()
