@@ -54,6 +54,8 @@ def main():
     global args
     args = parser.parse_args()
 
+    args.epochs = 5
+
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     torch.manual_seed(args.seed)
     if args.cuda:
@@ -179,8 +181,18 @@ def test(test_loader, model):
     model.eval()
 
     # TODO: Iterate over test set and evaluate MAP@10
-    test_desc = None
-    test_img = None
+
+    test_desc = []
+    test_img = []
+
+    for batch_idx, (x,y) in enumerate(test_loader):
+        desc_embeddings, img_embeddings = model(x,y)
+        test_desc.append(desc_embeddings)
+        test_img.append(img_embeddings)
+
+    test_desc = np.stack(test_desc, axis=0)
+    test_img = np.stack(test_img, axis=0)
+
     map = mapk(test_desc, test_img)
 
     print('\n{} set: MAP@10: {:.2f}\n'.format(
