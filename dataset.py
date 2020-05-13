@@ -13,25 +13,35 @@ PATH = "input/"
 
 
 class FLICKR30K(Dataset):
-    c_vec = CountVectorizer(stop_words='english', min_df=1, max_df=100000)
+
     w2v_model = None
 
-    def __init__(self, mode, limit=-1):
+    def __init__(self, mode="train", limit=-1, word_transformer="w2v"):
         super().__init__()
         assert mode in ['train', 'val', 'test']
         self.mode = mode
-        internal_set_images = read_split_images(path=PATH, mode=self.mode, limit=limit)
+        internal_set_images = read_split_images(path=PATH, mode=self.mode, limit=limit, verbose=False)
         internal_set_captions = json.load(open('output/data/{}.json'.format(self.mode), 'r'))
 
         self.image_labels = internal_set_images.iloc[:, 0]
         internal_set_images = internal_set_images.drop(0, 1)
         self.images = internal_set_images.to_numpy()
-
         self.caption_labels = list(internal_set_captions.keys())
-        if mode == 'train':
-            self.captions, FLICKR30K.w2v_model = train_w2v(internal_set_captions.values())
+
+        if word_transformer == "w2v":
+            if mode == 'train':
+                self.captions, FLICKR30K.w2v_model = train_w2v(internal_set_captions.values())
+            else:
+                self.captions = use_w2v(internal_set_captions.values(), FLICKR30K.w2v_model)
+        elif word_transformer == "bow":
+            c_vec = CountVectorizer(stop_words='english', min_df=1, max_df=100000)
+            # always fit on training data
+            caption_train = json.load(open('output/data/{}.json'.format('train'), 'r'))
+            c_vec.fit(caption_train.values())
+            # transform on train/val/test set
+            self.captions = c_vec.transform(internal_set_captions.values())
         else:
-            self.captions = use_w2v(internal_set_captions.values(), FLICKR30K.w2v_model)
+            print("word_transformer argument should be either w2v or bow")
 
         if limit > -1:
             self.captions = self.captions[:limit * 5]
