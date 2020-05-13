@@ -11,6 +11,7 @@ from models import *
 from losses import *
 from eval import *
 from dataset import *
+from similarity import get_similarity_matrix
 
 parser = argparse.ArgumentParser(description='Cross-modal Retrieval with Hashing')
 parser.add_argument('--name', default='BasicModel', type=str,
@@ -29,7 +30,7 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='enables CUDA training')
-parser.add_argument('--log-interval', type=int, default=250, metavar='N',
+parser.add_argument('--log-interval', type=int, default=50, metavar='N',
                     help='how many batches to wait before logging training status')
 parser.add_argument('--resume', default='', type=str,
                     help='path to latest checkpoint (default: none)')
@@ -143,6 +144,7 @@ def train(train_loader, model, S, optimizer, epoch):
         # pass data samples to model
         F, G, B = model(x, y)
 
+        # sim = get_similarity_matrix(indices_x, indices_y)
         sim = S[indices_x, indices_y]
 
         # TODO: Use F, G and B to compute the MAP@10 and loss
